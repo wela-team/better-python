@@ -3,7 +3,7 @@ const DEFAULT_MODEL = {
         name: "gpt-4o-2024-08-06",
     },
     ANTHROPIC: {
-        name: "claude-3-7-sonnet-latest",
+        name: "claude-sonnet-4-20250514",
     },
     MISTRAL: {
         name: "pixtral-12b-2409",
