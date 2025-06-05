@@ -51,6 +51,10 @@ Conduct an in-depth analysis of the code. Consider the following aspects:
     - Error handling and edge cases
 
     - Modularity and reusability
+   
+    - Code should be written in a way that is easy to understand and maintain
+   
+    - Code should be written in a way that it can scale and be used in a production environment
 
     - Comments and documentation
 
