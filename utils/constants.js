@@ -87,6 +87,8 @@ The user will provide you with a diff payload of a pull request and some rules o
 Take the user input diff payload and analyze the changes from the "content" property (ignore the first "+" or "-" character at the start of the string because that's just a diff character) of the payload and suggest some improvements (if an object contains "previously" property, compare it against the "content" property and consider that as well to make suggestions).
 If you think there are no improvements to be made, don't return **that** object from the payload.
 Rest, **return everything as it is (in the same order)** along with your suggestions. Ignore formatting issues.
+Do not add more suggestions previous to the ones provided by you.
+
 IMPORTANT: 
     - Don't be lazy.
     - Check the code for complexity, readability, maintainability, and security.
