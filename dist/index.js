@@ -62519,19 +62519,19 @@ const coerceBoolean = (value) => {
     return Boolean(value);
 };
 const maybeCoerceInteger = (value) => {
-    if (value === undefined) {
+    if (value == null) {
         return undefined;
     }
     return coerceInteger(value);
 };
 const maybeCoerceFloat = (value) => {
-    if (value === undefined) {
+    if (value == null) {
         return undefined;
     }
     return coerceFloat(value);
 };
 const maybeCoerceBoolean = (value) => {
-    if (value === undefined) {
+    if (value == null) {
         return undefined;
     }
     return coerceBoolean(value);
@@ -62550,7 +62550,7 @@ const safeJSON = (text) => {
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 //# sourceMappingURL=sleep.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/version.mjs
-const VERSION = '5.12.2'; // x-release-please-version
+const VERSION = '5.22.0'; // x-release-please-version
 //# sourceMappingURL=version.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/internal/detect-platform.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
@@ -64065,6 +64065,36 @@ class CursorPage extends AbstractPage {
             query: {
                 ...maybeObj(this.options.query),
                 after: id,
+            },
+        };
+    }
+}
+class ConversationCursorPage extends AbstractPage {
+    constructor(client, response, body, options) {
+        super(client, response, body, options);
+        this.data = body.data || [];
+        this.has_more = body.has_more || false;
+        this.last_id = body.last_id || '';
+    }
+    getPaginatedItems() {
+        return this.data ?? [];
+    }
+    hasNextPage() {
+        if (this.has_more === false) {
+            return false;
+        }
+        return super.hasNextPage();
+    }
+    nextPageRequestOptions() {
+        const cursor = this.last_id;
+        if (!cursor) {
+            return null;
+        }
+        return {
+            ...this.options,
+            query: {
+                ...maybeObj(this.options.query),
+                after: cursor,
             },
         };
     }
@@ -66319,6 +66349,9 @@ class TranscriptionSessions extends APIResource {
 
 
 
+/**
+ * @deprecated Realtime has now launched and is generally available. The old beta API is now deprecated.
+ */
 class Realtime extends APIResource {
     constructor() {
         super(...arguments);
@@ -67488,6 +67521,83 @@ class Containers extends APIResource {
 }
 Containers.Files = Files;
 //# sourceMappingURL=containers.mjs.map
+;// CONCATENATED MODULE: ./node_modules/openai/resources/conversations/items.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
+
+class Items extends APIResource {
+    /**
+     * Create items in a conversation with the given ID.
+     */
+    create(conversationID, params, options) {
+        const { include, ...body } = params;
+        return this._client.post(path `/conversations/${conversationID}/items`, {
+            query: { include },
+            body,
+            ...options,
+        });
+    }
+    /**
+     * Get a single item from a conversation with the given IDs.
+     */
+    retrieve(itemID, params, options) {
+        const { conversation_id, ...query } = params;
+        return this._client.get(path `/conversations/${conversation_id}/items/${itemID}`, { query, ...options });
+    }
+    /**
+     * List all items for a conversation with the given ID.
+     */
+    list(conversationID, query = {}, options) {
+        return this._client.getAPIList(path `/conversations/${conversationID}/items`, (ConversationCursorPage), { query, ...options });
+    }
+    /**
+     * Delete an item from a conversation with the given IDs.
+     */
+    delete(itemID, params, options) {
+        const { conversation_id } = params;
+        return this._client.delete(path `/conversations/${conversation_id}/items/${itemID}`, options);
+    }
+}
+//# sourceMappingURL=items.mjs.map
+;// CONCATENATED MODULE: ./node_modules/openai/resources/conversations/conversations.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
+
+
+class Conversations extends APIResource {
+    constructor() {
+        super(...arguments);
+        this.items = new Items(this._client);
+    }
+    /**
+     * Create a conversation.
+     */
+    create(body, options) {
+        return this._client.post('/conversations', { body, ...options });
+    }
+    /**
+     * Get a conversation with the given ID.
+     */
+    retrieve(conversationID, options) {
+        return this._client.get(path `/conversations/${conversationID}`, options);
+    }
+    /**
+     * Update a conversation's metadata with the given ID.
+     */
+    update(conversationID, body, options) {
+        return this._client.post(path `/conversations/${conversationID}`, { body, ...options });
+    }
+    /**
+     * Delete a conversation with the given ID.
+     */
+    delete(conversationID, options) {
+        return this._client.delete(path `/conversations/${conversationID}`, options);
+    }
+}
+Conversations.Items = Items;
+//# sourceMappingURL=conversations.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/embeddings.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
@@ -67679,7 +67789,7 @@ class files_Files extends APIResource {
     /**
      * Upload a file that can be used across various endpoints. Individual files can be
      * up to 512 MB, and the size of all files uploaded by one organization can be up
-     * to 100 GB.
+     * to 1 TB.
      *
      * The Assistants API supports files up to 2 million tokens and of specific file
      * types. See the
@@ -68153,6 +68263,31 @@ class Moderations extends APIResource {
     }
 }
 //# sourceMappingURL=moderations.mjs.map
+;// CONCATENATED MODULE: ./node_modules/openai/resources/realtime/client-secrets.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+class ClientSecrets extends APIResource {
+    /**
+     * Create a Realtime client secret with an associated session configuration.
+     */
+    create(body, options) {
+        return this._client.post('/realtime/client_secrets', { body, ...options });
+    }
+}
+//# sourceMappingURL=client-secrets.mjs.map
+;// CONCATENATED MODULE: ./node_modules/openai/resources/realtime/realtime.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
+
+class realtime_Realtime extends APIResource {
+    constructor() {
+        super(...arguments);
+        this.clientSecrets = new ClientSecrets(this._client);
+    }
+}
+realtime_Realtime.ClientSecrets = ClientSecrets;
+//# sourceMappingURL=realtime.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/lib/ResponsesParser.mjs
 
 
@@ -68446,8 +68581,16 @@ class ResponseStream extends EventStream {
                 if (!output) {
                     throw new error_OpenAIError(`missing output at index ${event.output_index}`);
                 }
-                if (output.type === 'message') {
-                    output.content.push(event.part);
+                const type = output.type;
+                const part = event.part;
+                if (type === 'message' && part.type !== 'reasoning_text') {
+                    output.content.push(part);
+                }
+                else if (type === 'reasoning' && part.type === 'reasoning_text') {
+                    if (!output.content) {
+                        output.content = [];
+                    }
+                    output.content.push(part);
                 }
                 break;
             }
@@ -68475,6 +68618,23 @@ class ResponseStream extends EventStream {
                 }
                 if (output.type === 'function_call') {
                     output.arguments += event.delta;
+                }
+                break;
+            }
+            case 'response.reasoning_text.delta': {
+                const output = snapshot.output[event.output_index];
+                if (!output) {
+                    throw new error_OpenAIError(`missing output at index ${event.output_index}`);
+                }
+                if (output.type === 'reasoning') {
+                    const content = output.content?.[event.content_index];
+                    if (!content) {
+                        throw new error_OpenAIError(`missing content at index ${event.content_index}`);
+                    }
+                    if (content.type !== 'reasoning_text') {
+                        throw new error_OpenAIError(`expected content to be 'reasoning_text', got ${content.type}`);
+                    }
+                    content.text += event.delta;
                 }
                 break;
             }
@@ -69231,10 +69391,14 @@ _Webhooks_instances = new WeakSet(), _Webhooks_validateSecret = function _Webhoo
 
 
 
+
+
 //# sourceMappingURL=index.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/client.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 var _OpenAI_instances, client_a, _OpenAI_encoder, _OpenAI_baseURLOverridden;
+
+
 
 
 
@@ -69312,10 +69476,12 @@ class OpenAI {
         this.batches = new Batches(this);
         this.uploads = new Uploads(this);
         this.responses = new Responses(this);
+        this.realtime = new realtime_Realtime(this);
+        this.conversations = new Conversations(this);
         this.evals = new Evals(this);
         this.containers = new Containers(this);
         if (apiKey === undefined) {
-            throw new error_OpenAIError("The OPENAI_API_KEY environment variable is missing or empty; either provide it, or instantiate the OpenAI client with an apiKey option, like new OpenAI({ apiKey: 'My API Key' }).");
+            throw new error_OpenAIError('Missing credentials. Please pass an `apiKey`, or set the `OPENAI_API_KEY` environment variable.');
         }
         const options = {
             apiKey,
@@ -69343,7 +69509,7 @@ class OpenAI {
         this.fetch = options.fetch ?? getDefaultFetch();
         __classPrivateFieldSet(this, _OpenAI_encoder, FallbackEncoder, "f");
         this._options = options;
-        this.apiKey = apiKey;
+        this.apiKey = typeof apiKey === 'string' ? apiKey : 'Missing Key';
         this.organization = organization;
         this.project = project;
         this.webhookSecret = webhookSecret;
@@ -69390,6 +69556,27 @@ class OpenAI {
     makeStatusError(status, error, message, headers) {
         return APIError.generate(status, error, message, headers);
     }
+    async _callApiKey() {
+        const apiKey = this._options.apiKey;
+        if (typeof apiKey !== 'function')
+            return false;
+        let token;
+        try {
+            token = await apiKey();
+        }
+        catch (err) {
+            if (err instanceof error_OpenAIError)
+                throw err;
+            throw new error_OpenAIError(`Failed to get token from 'apiKey' function: ${err.message}`, 
+            // @ts-ignore
+            { cause: err });
+        }
+        if (typeof token !== 'string' || !token) {
+            throw new error_OpenAIError(`Expected 'apiKey' function argument to return a string but it returned ${token}`);
+        }
+        this.apiKey = token;
+        return true;
+    }
     buildURL(path, query, defaultBaseURL) {
         const baseURL = (!__classPrivateFieldGet(this, _OpenAI_instances, "m", _OpenAI_baseURLOverridden).call(this) && defaultBaseURL) || this.baseURL;
         const url = isAbsoluteURL(path) ?
@@ -69407,7 +69594,9 @@ class OpenAI {
     /**
      * Used as a callback for mutating the given `FinalRequestOptions` object.
      */
-    async prepareOptions(options) { }
+    async prepareOptions(options) {
+        await this._callApiKey();
+    }
     /**
      * Used as a callback for mutating the given `RequestInit` object.
      *
@@ -69466,7 +69655,7 @@ class OpenAI {
         const controller = new AbortController();
         const response = await this.fetchWithTimeout(url, req, timeout, controller).catch(castToError);
         const headersTime = Date.now();
-        if (response instanceof Error) {
+        if (response instanceof globalThis.Error) {
             const retryMessage = `retrying, ${retriesRemaining} attempts remaining`;
             if (options.signal?.aborted) {
                 throw new APIUserAbortError();
@@ -69702,7 +69891,7 @@ class OpenAI {
                 // Preserve legacy string encoding behavior for now
                 headers.values.has('content-type')) ||
             // `Blob` is superset of `File`
-            body instanceof Blob ||
+            (globalThis.Blob && body instanceof globalThis.Blob) ||
             // `FormData` -> `multipart/form-data`
             body instanceof FormData ||
             // `URLSearchParams` -> `application/x-www-form-urlencoded`
@@ -69757,6 +69946,8 @@ OpenAI.Beta = Beta;
 OpenAI.Batches = Batches;
 OpenAI.Uploads = Uploads;
 OpenAI.Responses = Responses;
+OpenAI.Realtime = realtime_Realtime;
+OpenAI.Conversations = Conversations;
 OpenAI.Evals = Evals;
 OpenAI.Containers = Containers;
 //# sourceMappingURL=client.mjs.map
@@ -69797,8 +69988,6 @@ class AzureOpenAI extends OpenAI {
         if (azureADTokenProvider && apiKey) {
             throw new error_OpenAIError('The `apiKey` and `azureADTokenProvider` arguments are mutually exclusive; only one can be passed at a time.');
         }
-        // define a sentinel value to avoid any typing issues
-        apiKey ?? (apiKey = API_KEY_SENTINEL);
         opts.defaultQuery = { ...opts.defaultQuery, 'api-version': apiVersion };
         if (!baseURL) {
             if (!endpoint) {
@@ -69815,13 +70004,12 @@ class AzureOpenAI extends OpenAI {
             }
         }
         super({
-            apiKey,
+            apiKey: azureADTokenProvider ?? apiKey,
             baseURL,
             ...opts,
             ...(dangerouslyAllowBrowser !== undefined ? { dangerouslyAllowBrowser } : {}),
         });
         this.apiVersion = '';
-        this._azureADTokenProvider = azureADTokenProvider;
         this.apiVersion = apiVersion;
         this.deploymentName = deployment;
     }
@@ -69837,41 +70025,11 @@ class AzureOpenAI extends OpenAI {
         }
         return super.buildRequest(options, props);
     }
-    async _getAzureADToken() {
-        if (typeof this._azureADTokenProvider === 'function') {
-            const token = await this._azureADTokenProvider();
-            if (!token || typeof token !== 'string') {
-                throw new error_OpenAIError(`Expected 'azureADTokenProvider' argument to return a string but it returned ${token}`);
-            }
-            return token;
-        }
-        return undefined;
-    }
     async authHeaders(opts) {
-        return;
-    }
-    async prepareOptions(opts) {
-        opts.headers = buildHeaders([opts.headers]);
-        /**
-         * The user should provide a bearer token provider if they want
-         * to use Azure AD authentication. The user shouldn't set the
-         * Authorization header manually because the header is overwritten
-         * with the Azure AD token if a bearer token provider is provided.
-         */
-        if (opts.headers.values.get('Authorization') || opts.headers.values.get('api-key')) {
-            return super.prepareOptions(opts);
+        if (typeof this._options.apiKey === 'string') {
+            return buildHeaders([{ 'api-key': this.apiKey }]);
         }
-        const token = await this._getAzureADToken();
-        if (token) {
-            opts.headers.values.set('Authorization', `Bearer ${token}`);
-        }
-        else if (this.apiKey !== API_KEY_SENTINEL) {
-            opts.headers.values.set('api-key', this.apiKey);
-        }
-        else {
-            throw new error_OpenAIError('Unable to handle auth');
-        }
-        return super.prepareOptions(opts);
+        return super.authHeaders(opts);
     }
 }
 const _deployments_endpoints = new Set([
@@ -69885,7 +70043,6 @@ const _deployments_endpoints = new Set([
     '/batches',
     '/images/edits',
 ]);
-const API_KEY_SENTINEL = '<Missing Key>';
 //# sourceMappingURL=azure.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/index.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
