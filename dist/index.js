@@ -112020,9 +112020,7 @@ async function getSuggestions({
 function resolveCommentPositions(rawComments, comments) {
     return comments
         .map(comment => {
-            const rawComment = rawComments.find(
-                raw => raw.path === comment.path && raw.line === comment.line
-            );
+            const rawComment = rawComments.find(raw => raw.path === comment.path && raw.line === comment.line);
 
             if (!rawComment) {
                 return null;
