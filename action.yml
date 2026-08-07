@@ -25,5 +25,5 @@ inputs:
     max-retries:
         description: "Maximum number of retries on failure - default is 3 - 0 means no retries"
 runs:
-    using: "node20"
+    using: "node24"
     main: "dist/index.js"

@@ -112010,14 +112010,32 @@ async function getSuggestions({
 }
 
 /**
+ * Matches every suggestion back to the diff change it came from, dropping the
+ * ones that no longer resolve and marking removed lines as left-side comments.
+ *
  * @param {rawCommentsPayload} rawComments
  * @param {CommentsPayload} comments
  * @returns {CommentsPayload}
  */
-function filterPositionsNotPresentInRawPayload(rawComments, comments) {
-    return comments.filter(comment =>
-        rawComments.some(rawComment => rawComment.path === comment.path && rawComment.line === comment.line)
-    );
+function resolveCommentPositions(rawComments, comments) {
+    return comments
+        .map(comment => {
+            const rawComment = rawComments.find(
+                raw => raw.path === comment.path && raw.line === comment.line
+            );
+
+            if (!rawComment) {
+                return null;
+            }
+
+            /**
+             * A removed line only exists on the left side of the diff. Without an
+             * explicit side the API resolves it against the new file, where it is
+             * absent, and rejects the whole review with "Line could not be resolved".
+             */
+            return rawComment.change?.type === "del" ? { ...comment, side: "LEFT" } : comment;
+        })
+        .filter(comment => comment);
 }
 
 /**
@@ -112027,21 +112045,38 @@ function filterPositionsNotPresentInRawPayload(rawComments, comments) {
  * @param {string} modelName
  */
 async function addReviewComments(suggestions, octokit, rawComments, modelName) {
-    const { info } = log({ withTimestamp: true }); // eslint-disable-line no-use-before-define
-    const comments = filterPositionsNotPresentInRawPayload(rawComments, extractComments().comments(suggestions));
+    const { info, warning } = log({ withTimestamp: true }); // eslint-disable-line no-use-before-define
+    const comments = resolveCommentPositions(rawComments, extractComments().comments(suggestions));
+
+    const review = {
+        owner: github.context.repo.owner,
+        repo: github.context.repo.repo,
+        pull_number: github.context.payload.pull_request.number,
+        body: `Code Review by ${modelName}`,
+        event: "COMMENT",
+    };
 
     try {
-        await octokit.rest.pulls.createReview({
-            owner: github.context.repo.owner,
-            repo: github.context.repo.repo,
-            pull_number: github.context.payload.pull_request.number,
-            body: `Code Review by ${modelName}`,
-            event: "COMMENT",
-            comments,
-        });
-    } catch (error) {
+        await octokit.rest.pulls.createReview({ ...review, comments });
+    } catch (err) {
+        /**
+         * createReview is atomic, so a single unresolvable line discards every
+         * other comment with it. Degrade to a plain review body rather than
+         * losing the whole review.
+         */
+        warning(`Could not attach ${comments.length} inline comment(s): ${err.message}`);
         info(`Failed to add review comments: ${JSON.stringify(comments, null, 2)}`);
-        throw error;
+
+        await octokit.rest.pulls.createReview({
+            ...review,
+            body: [
+                `Code Review by ${modelName}`,
+                "",
+                "These suggestions could not be attached to their lines:",
+                "",
+                ...comments.map(comment => `**\`${comment.path}:${comment.line}\`**\n\n${comment.body}`),
+            ].join("\n"),
+        });
     }
 }
 
